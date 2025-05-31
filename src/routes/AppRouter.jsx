@@ -6,7 +6,9 @@ import Register from '../pages/auth/Register';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Logout from '../pages/auth/Logout';
 import UserProfile from '../pages/profile/[userId]';
-
+import CreateStream from '../pages/stream/CreateStream';
+import LiveStreams from '../pages/stream/LiveStreams';
+import LiveStreamCamera from '../pages/stream/LiveStreamCamera';
 const AppRouter = () => {
   return (
     <BrowserRouter>
@@ -30,6 +32,32 @@ const AppRouter = () => {
           element={
             <ProtectedRoute>
               <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/create-stream"
+          element={
+            <ProtectedRoute>
+              <CreateStream />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/go-live"
+          element={
+            <ProtectedRoute>
+              <LiveStreamCamera />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/watch-stream"
+          element={
+            <ProtectedRoute>
+              <LiveStreams />
             </ProtectedRoute>
           }
         />

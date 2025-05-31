@@ -7,9 +7,12 @@ import {
   FiLogOut,
   FiSun,
   FiMoon,
+  FiVideo,
+  FiPlay,
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from '../Notification/NotificationBell';
+import { Link } from 'react-router-dom';
 
 const Header = ({ darkMode, setDarkMode }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -36,12 +39,9 @@ const Header = ({ darkMode, setDarkMode }) => {
         <FiSearch className="w-5 h-5 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors" />
         <NotificationBell />
         <div className="flex items-center gap-4">
-          {[FiHome].map((Icon, index) => (
-            <Icon
-              key={index}
-              className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"
-            />
-          ))}
+          <Link to="/" className="text-gray-600 hover:text-gray-900">
+                  <FiHome className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
+         </Link>
         </div>
         <div
           className="relative flex items-center gap-1 cursor-pointer"
@@ -61,6 +61,12 @@ const Header = ({ darkMode, setDarkMode }) => {
             </div>
           )}
         </div>
+        <Link to="/go-live" className="text-gray-600 hover:text-gray-900">
+        <FiVideo className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/> 
+        </Link>
+         <Link to="/watch-stream" className="text-gray-600 hover:text-gray-900">
+                  <FiPlay className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
+        </Link>
         <button
           onClick={() => setDarkMode(!darkMode)}
           className="ml-4 p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
