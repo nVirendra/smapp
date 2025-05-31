@@ -64,7 +64,7 @@ const Header = ({ darkMode, setDarkMode }) => {
         <Link to="/go-live" className="text-gray-600 hover:text-gray-900">
         <FiVideo className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/> 
         </Link>
-         <Link to="/watch-stream" className="text-gray-600 hover:text-gray-900">
+         <Link to="/live-streams" className="text-gray-600 hover:text-gray-900">
                   <FiPlay className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
         </Link>
         <button

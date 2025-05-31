@@ -35,14 +35,7 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         />
-         <Route
-          path="/create-stream"
-          element={
-            <ProtectedRoute>
-              <CreateStream />
-            </ProtectedRoute>
-          }
-        />
+         
 
         <Route
           path="/go-live"
@@ -54,13 +47,23 @@ const AppRouter = () => {
         />
 
         <Route
-          path="/watch-stream"
+          path="/live-streams"
           element={
             <ProtectedRoute>
               <LiveStreams />
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/watch/:streamId"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );
