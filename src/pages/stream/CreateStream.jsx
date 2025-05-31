@@ -54,7 +54,7 @@ const CreateStream = () => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout mainClassName="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       <div className="col-span-12 md:col-span-10 lg:col-span-8 xl:col-span-6 mx-auto">
         <div className="bg-white dark:bg-gray-900 shadow-lg rounded-lg p-8">
           <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">

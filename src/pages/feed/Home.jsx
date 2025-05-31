@@ -20,7 +20,7 @@ const Home = () => {
   }, [searchQuery]);
 
   return (
-    <MainLayout>
+    <MainLayout mainClassName="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       <LeftSidebar />
 
       <section className="lg:col-span-6 space-y-6">

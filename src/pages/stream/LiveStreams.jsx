@@ -28,7 +28,7 @@ const LiveStreams = () => {
 
   if (loading)
     return (
-      <MainLayout>
+      <MainLayout >
         <div className="text-center text-lg font-medium py-10 text-gray-600 animate-pulse">
           Loading live streams...
         </div>

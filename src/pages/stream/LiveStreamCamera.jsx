@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import RecordRTC from 'recordrtc';
 import axios from 'axios';
+import MainLayout from '../../layouts/MainLayout';
 
 const LiveStreamCamera = () => {
     const webcamRef = useRef(null);
@@ -299,7 +300,7 @@ const LiveStreamCamera = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
+        <MainLayout><div className="max-w-6xl mx-auto p-6">
             {!streamData ? (
                 <div className="bg-white shadow-lg rounded-xl p-8 space-y-6">
                     <h2 className="text-2xl font-bold text-gray-800">Create Live Stream</h2>
@@ -414,7 +415,7 @@ const LiveStreamCamera = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </div></MainLayout>
     );
 };
 

@@ -79,7 +79,7 @@ const UserProfilePage = () => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout mainClassName="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
       <section className="lg:col-span-8 lg:col-start-3 space-y-6">
         <ProfileHeader
           profile={profile}
