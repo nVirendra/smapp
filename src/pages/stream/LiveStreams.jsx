@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import MainLayout from '../../layouts/MainLayout';
 import { FiPlay } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+
 
 const LiveStreams = () => {
   const [liveStreams, setLiveStreams] = useState([]);
@@ -67,13 +69,13 @@ const LiveStreams = () => {
                   <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-600 bg-red-100 rounded-full">
                     🔴 LIVE
                   </span>
-                  <button
-                    onClick={() => window.location.href = `/watch/${stream._id}`}
+                  <Link
+                    to={`/watch/${stream._id}`}
                     className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200"
                   >
                     <FiPlay className="text-white" />
                     Watch
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}

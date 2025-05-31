@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings, Users, Heart, Share2, Flag, Send } from 'lucide-react';
+import MainLayout from '../../layouts/MainLayout';
 
 const WatchPage = () => {
   // Stream data (would come from props/API in real app)
@@ -74,7 +75,8 @@ const WatchPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <MainLayout>
+    <div className="min-h-screen bg-white-900 text-white">
       <div className="flex flex-col lg:flex-row max-w-7xl mx-auto">
         {/* Main Content */}
         <div className="flex-1 p-4">
@@ -239,6 +241,7 @@ const WatchPage = () => {
         </div>
       </div>
     </div>
+    </MainLayout>
   );
 };
 

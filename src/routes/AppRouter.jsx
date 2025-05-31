@@ -9,6 +9,7 @@ import UserProfile from '../pages/profile/[userId]';
 import CreateStream from '../pages/stream/CreateStream';
 import LiveStreams from '../pages/stream/LiveStreams';
 import LiveStreamCamera from '../pages/stream/LiveStreamCamera';
+import WatchPage from '../pages/stream/[streamId]';
 const AppRouter = () => {
   return (
     <BrowserRouter>
@@ -59,7 +60,7 @@ const AppRouter = () => {
           path="/watch/:streamId"
           element={
             <ProtectedRoute>
-              <UserProfile />
+              <WatchPage />
             </ProtectedRoute>
           }
         />
