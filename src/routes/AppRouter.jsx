@@ -8,7 +8,7 @@ import Logout from '../pages/auth/Logout';
 import UserProfile from '../pages/profile/[userId]';
 import LiveStreams from '../pages/stream/LiveStreams';
 import LiveStreamCamera from '../pages/stream/LiveStreamCamera';
-import WatchPage from '../pages/stream/[streamId]';
+import WatchPage from '../pages/stream/[streamKey]';
 const AppRouter = () => {
   return (
     <BrowserRouter>
@@ -56,7 +56,7 @@ const AppRouter = () => {
         />
 
         <Route
-          path="/watch/:streamId"
+          path="/watch/:streamKey"
           element={
             <ProtectedRoute>
               <WatchPage />

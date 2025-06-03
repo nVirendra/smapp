@@ -206,7 +206,7 @@ const LiveStreamCamera = () => {
             };
 
             // Set up interval to send chunks every 2 seconds
-            chunkIntervalRef.current = setInterval(sendChunks, 2000);
+            chunkIntervalRef.current = setInterval(sendChunks, 1000);
             // console.log('Chunk interval started');
 
         } catch (error) {
