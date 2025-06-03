@@ -5,7 +5,6 @@ import { NotificationContext } from '../../context/NotificationContext';
 export default function NotificationBell() {
   const { notifications } = useContext(NotificationContext);
   const unread = notifications.filter((n) => !n.read).length;
-  console.log('🔔 Unread notifications count:', unread);
 
   return (
     <div className="relative">

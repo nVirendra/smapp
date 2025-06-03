@@ -12,7 +12,7 @@ const Feed = () => {
     const fetchPosts = async () => {
       try {
         const { data } = await fetchFeed();
-        console.log('Fetched posts:', data.result);
+
         const normalizedPosts = data.result.map((post) => ({
           id: post._id,
           user: post.userId?.name || 'Unknown User',

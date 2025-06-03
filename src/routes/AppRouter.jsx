@@ -35,7 +35,6 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         />
-         
 
         <Route
           path="/go-live"
@@ -63,7 +62,6 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         />
-
       </Routes>
     </BrowserRouter>
   );
