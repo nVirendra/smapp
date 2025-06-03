@@ -6,7 +6,6 @@ import Register from '../pages/auth/Register';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Logout from '../pages/auth/Logout';
 import UserProfile from '../pages/profile/[userId]';
-import CreateStream from '../pages/stream/CreateStream';
 import LiveStreams from '../pages/stream/LiveStreams';
 import LiveStreamCamera from '../pages/stream/LiveStreamCamera';
 import WatchPage from '../pages/stream/[streamId]';

@@ -60,23 +60,27 @@ const LiveStreamCamera = () => {
         }
 
         try {
-            console.log('Sending video chunk of size:', blob.size);
+            // console.log('Sending video chunk of size:', blob.size);
             setConnectionStatus('sending');
             
             const formData = new FormData();
-            formData.append('videoChunk', blob, 'chunk.webm');
+            formData.append('videoChunk', blob, `chunk-${Date.now()}.webm`);
             formData.append('streamKey', streamDataRef.current.streamKey);
             formData.append('timestamp', Date.now().toString());
+            
+            // Debug: log formData content
+            // for (let [key, value] of formData.entries()) {
+            //     console.log(`${key}:`, value);
+            // }
 
             const response = await axios.post('http://localhost:5000/api/streams/chunk', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 timeout: 10000
             });
 
-            console.log('Chunk sent successfully:', response.status);
+            // console.log('Chunk sent successfully:', response.status);
             setConnectionStatus('connected');
 
         } catch (error) {
@@ -93,7 +97,7 @@ const LiveStreamCamera = () => {
 
     const startStreaming = async () => {
         try {
-            console.log('Starting stream...');
+            // console.log('Starting stream...');
             setConnectionStatus('connecting');
             
             const token = localStorage.getItem('token');
@@ -117,7 +121,7 @@ const LiveStreamCamera = () => {
             isStreamingRef.current = true;
             streamDataRef.current = streamData;
             
-            console.log('Starting WebRTC streaming...');
+            // console.log('Starting WebRTC streaming...');
             await startWebRTCStreaming(stream);
             
         } catch (error) {
@@ -131,7 +135,7 @@ const LiveStreamCamera = () => {
 
     const startWebRTCStreaming = async (stream) => {
         try {
-            console.log('Initializing WebRTC streaming...');
+            // console.log('Initializing WebRTC streaming...');
             
             // Create recorder with proper configuration
             const recorder = new RecordRTC(stream, {
@@ -150,12 +154,12 @@ const LiveStreamCamera = () => {
             mediaRecorderRef.current = recorder;
             recorder.startRecording();
             
-            console.log('Recording started, setting up chunk interval...');
+            // console.log('Recording started, setting up chunk interval...');
             setConnectionStatus('connected');
 
             // Use a more reliable interval-based approach
             const sendChunks = () => {
-                console.log('Interval triggered. isStreaming:', isStreamingRef.current);
+                // console.log('Interval triggered. isStreaming:', isStreamingRef.current);
                 
                 if (!isStreamingRef.current || !mediaRecorderRef.current) {
                     console.log('Stopping chunk interval - stream ended');
@@ -203,7 +207,7 @@ const LiveStreamCamera = () => {
 
             // Set up interval to send chunks every 2 seconds
             chunkIntervalRef.current = setInterval(sendChunks, 2000);
-            console.log('Chunk interval started');
+            // console.log('Chunk interval started');
 
         } catch (error) {
             console.error('WebRTC streaming error:', error);
