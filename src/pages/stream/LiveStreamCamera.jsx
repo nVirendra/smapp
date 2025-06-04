@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import RecordRTC from 'recordrtc';
 import axios from 'axios';
 import MainLayout from '../../layouts/MainLayout';
 import { useSocket } from '../../lib/socket';
@@ -17,9 +16,41 @@ const LiveStreamCamera = () => {
   const [streamData, setStreamData] = useState(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isCreatingStream, setIsCreatingStream] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+
+
+  React.useEffect(() => {
+  const fetchFirstStream = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/streams/live', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data && response.data.length > 0) {
+        const firstLiveStream = response.data[0];
+        setStreamData({
+            streamId: firstLiveStream._id,
+            title: firstLiveStream.title,
+            streamKey: firstLiveStream.streamKey,
+            rtmpUrl: firstLiveStream.rtmpUrl,
+            playbackUrl: firstLiveStream.playbackUrl,
+            status: firstLiveStream.status
+        });
+        streamDataRef.current = firstLiveStream;
+      } else {
+        console.log('ℹ️ No live streams available');
+      }
+    } catch (err) {
+      console.error('❌ Failed to fetch live streams:', err);
+    }
+  };
+
+  fetchFirstStream();
+}, []);
+
+
 
   const videoConstraints = {
     width: 1280,
@@ -43,7 +74,7 @@ const LiveStreamCamera = () => {
           },
         }
       );
-
+      console.log('on create live stream',response.data);
       setStreamData(response.data);
       streamDataRef.current = response.data;
       alert('Stream created successfully!');
@@ -89,24 +120,28 @@ const LiveStreamCamera = () => {
         return;
       }
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus',
+      const chunks = []; // For full video save
+       mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'video/webm; codecs=vp8,opus',
       });
 
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          event.data.arrayBuffer().then((buffer) => {
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const arrayBuffer = reader.result;
             socket.emit('stream-chunk', {
-              streamKey: streamDataRef.current.streamKey,
-              chunk: buffer,
+              //streamKey,
+              streamKey: streamDataRef.current?.streamKey,
+              chunk: arrayBuffer,
             });
-          });
+          };
+          reader.readAsArrayBuffer(event.data);
         }
       };
 
-      recorder.start(1000); // emit every second
+      mediaRecorderRef.current.start(1000); // send chunks every second
+
       setConnectionStatus('connected');
       console.log('📡 MediaRecorder started with socket.io');
     } catch (err) {
@@ -129,9 +164,10 @@ const LiveStreamCamera = () => {
         mediaRecorderRef.current = null;
       }
 
-      if (socketRef.current) {
-        socketRef.current.close();
+      if (socket) {
+        socket.close?.(); // check for close method just in case
       }
+
 
       const token = localStorage.getItem('token');
       await axios.put(
