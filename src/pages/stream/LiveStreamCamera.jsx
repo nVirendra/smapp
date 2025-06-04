@@ -8,9 +8,10 @@ const LiveStreamCamera = () => {
   const socket = useSocket();
   const webcamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
-  const chunkIntervalRef = useRef(null);
-  const isStreamingRef = useRef(false); // Use ref to avoid closure issues
+  const isStreamingRef = useRef(false);
   const streamDataRef = useRef(null);
+  const chunkSequenceRef = useRef(0);
+  const streamStartedRef = useRef(false);
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamData, setStreamData] = useState(null);
@@ -18,39 +19,41 @@ const LiveStreamCamera = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-
+  const [streamStats, setStreamStats] = useState({
+    chunkssent: 0,
+    totalBytes: 0,
+    errors: 0
+  });
 
   React.useEffect(() => {
-  const fetchFirstStream = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/streams/live', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const fetchFirstStream = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/streams/live', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      if (response.data && response.data.length > 0) {
-        const firstLiveStream = response.data[0];
-        setStreamData({
+        if (response.data && response.data.length > 0) {
+          const firstLiveStream = response.data[0];
+          setStreamData({
             streamId: firstLiveStream._id,
             title: firstLiveStream.title,
             streamKey: firstLiveStream.streamKey,
             rtmpUrl: firstLiveStream.rtmpUrl,
             playbackUrl: firstLiveStream.playbackUrl,
             status: firstLiveStream.status
-        });
-        streamDataRef.current = firstLiveStream;
-      } else {
-        console.log('ℹ️ No live streams available');
+          });
+          streamDataRef.current = firstLiveStream;
+        } else {
+          console.log('ℹ️ No live streams available');
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch live streams:', err);
       }
-    } catch (err) {
-      console.error('❌ Failed to fetch live streams:', err);
-    }
-  };
+    };
 
-  fetchFirstStream();
-}, []);
-
-
+    fetchFirstStream();
+  }, []);
 
   const videoConstraints = {
     width: 1280,
@@ -74,7 +77,7 @@ const LiveStreamCamera = () => {
           },
         }
       );
-      console.log('on create live stream',response.data);
+      console.log('on create live stream', response.data);
       setStreamData(response.data);
       streamDataRef.current = response.data;
       alert('Stream created successfully!');
@@ -100,11 +103,22 @@ const LiveStreamCamera = () => {
       const stream = webcamRef.current?.stream;
       if (!stream) {
         alert('Camera not accessible');
+        setConnectionStatus('error');
         return;
       }
 
       setIsStreaming(true);
       isStreamingRef.current = true;
+      streamStartedRef.current = false; // Reset for new stream
+      chunkSequenceRef.current = 0; // Reset sequence
+      
+      // Reset stats
+      setStreamStats({
+        chunksent: 0,
+        totalBytes: 0,
+        errors: 0
+      });
+
       await startWebRTCStreaming(stream, socket);
     } catch (err) {
       console.error('Start streaming error:', err);
@@ -120,30 +134,114 @@ const LiveStreamCamera = () => {
         return;
       }
 
-      const chunks = []; // For full video save
-       mediaRecorderRef.current = new MediaRecorder(stream, {
+      // 🎥 Enhanced MediaRecorder configuration for better WebM output
+      const options = {
         mimeType: 'video/webm; codecs=vp8,opus',
-      });
+        videoBitsPerSecond: 2000000, // 2Mbps
+        audioBitsPerSecond: 128000,  // 128kbps
+      };
+
+      // Fallback options if the preferred format isn't supported
+      let mediaRecorderOptions = options;
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.warn('⚠️ VP8/Opus not supported, trying VP9/Opus');
+        mediaRecorderOptions = {
+          mimeType: 'video/webm; codecs=vp9,opus',
+          videoBitsPerSecond: 2000000,
+          audioBitsPerSecond: 128000,
+        };
+        
+        if (!MediaRecorder.isTypeSupported(mediaRecorderOptions.mimeType)) {
+          console.warn('⚠️ VP9/Opus not supported, using default');
+          mediaRecorderOptions = {
+            mimeType: 'video/webm',
+            videoBitsPerSecond: 2000000,
+            audioBitsPerSecond: 128000,
+          };
+        }
+      }
+
+      console.log(`🎥 Using MediaRecorder with: ${mediaRecorderOptions.mimeType}`);
+
+      mediaRecorderRef.current = new MediaRecorder(stream, mediaRecorderOptions);
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
+        if (event.data && event.data.size > 0 && isStreamingRef.current) {
+          const isFirstChunk = !streamStartedRef.current;
+          streamStartedRef.current = true;
+          
+          setConnectionStatus('sending');
+          
           const reader = new FileReader();
           reader.onloadend = () => {
-            const arrayBuffer = reader.result;
-            socket.emit('stream-chunk', {
-              //streamKey,
-              streamKey: streamDataRef.current?.streamKey,
-              chunk: arrayBuffer,
-            });
+            try {
+              const arrayBuffer = reader.result;
+              const currentSequence = chunkSequenceRef.current++;
+              
+              console.log(`📦 Sending chunk ${currentSequence}: ${arrayBuffer.byteLength} bytes, isFirst: ${isFirstChunk}`);
+              
+              socket.emit('stream-chunk', {
+                streamKey: streamDataRef.current?.streamKey,
+                chunk: arrayBuffer,
+                isFirstChunk: isFirstChunk,
+                sequenceNumber: currentSequence,
+                timestamp: Date.now()
+              });
+
+              // Update stats
+              setStreamStats(prev => ({
+                chunksent: prev.chunksent + 1,
+                totalBytes: prev.totalBytes + arrayBuffer.byteLength,
+                errors: prev.errors
+              }));
+
+              setConnectionStatus('connected');
+            } catch (error) {
+              console.error('🔥 Error sending chunk:', error);
+              setStreamStats(prev => ({
+                ...prev,
+                errors: prev.errors + 1
+              }));
+              setConnectionStatus('error');
+            }
           };
+          
+          reader.onerror = () => {
+            console.error('🔥 FileReader error');
+            setStreamStats(prev => ({
+              ...prev,
+              errors: prev.errors + 1
+            }));
+            setConnectionStatus('error');
+          };
+          
           reader.readAsArrayBuffer(event.data);
         }
       };
 
-      mediaRecorderRef.current.start(1000); // send chunks every second
+      mediaRecorderRef.current.onstart = () => {
+        console.log('🎬 MediaRecorder started');
+        setConnectionStatus('connected');
+      };
 
-      setConnectionStatus('connected');
-      console.log('📡 MediaRecorder started with socket.io');
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('🔥 MediaRecorder error:', event.error);
+        setConnectionStatus('error');
+        setStreamStats(prev => ({
+          ...prev,
+          errors: prev.errors + 1
+        }));
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        console.log('🛑 MediaRecorder stopped');
+        setConnectionStatus('disconnected');
+      };
+
+      // 🚀 Start recording with 1-second intervals for good balance
+      mediaRecorderRef.current.start(1000);
+
+      console.log('📡 MediaRecorder started with socket.io streaming');
     } catch (err) {
       console.error('WebRTC streaming error:', err);
       setConnectionStatus('error');
@@ -159,24 +257,35 @@ const LiveStreamCamera = () => {
       isStreamingRef.current = false;
       setConnectionStatus('disconnecting');
 
-      if (mediaRecorderRef.current) {
+      // Stop MediaRecorder
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
+        
+        // Send stream-end event
+        if (socket && streamDataRef.current?.streamKey) {
+          socket.emit('stream-end', {
+            streamKey: streamDataRef.current.streamKey
+          });
+        }
       }
 
-      if (socket) {
-        socket.close?.(); // check for close method just in case
+      // Update stream status on server
+      if (streamData?.streamId) {
+        const token = localStorage.getItem('token');
+        await axios.put(
+          `http://localhost:5000/api/streams/${streamData.streamId}/end`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
       }
 
-
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `http://localhost:5000/api/streams/${streamData.streamId}/end`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Reset refs
+      mediaRecorderRef.current = null;
+      streamStartedRef.current = false;
+      chunkSequenceRef.current = 0;
 
       setConnectionStatus('disconnected');
+      console.log('✅ Stream stopped successfully');
     } catch (err) {
       console.error('Stop streaming error:', err);
       setConnectionStatus('error');
@@ -188,15 +297,18 @@ const LiveStreamCamera = () => {
     return () => {
       console.log('Component unmounting, cleaning up...');
       isStreamingRef.current = false;
-
-      if (chunkIntervalRef.current) {
-        clearInterval(chunkIntervalRef.current);
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
       }
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stopRecording();
+      
+      if (socket && streamDataRef.current?.streamKey) {
+        socket.emit('stream-end', {
+          streamKey: streamDataRef.current.streamKey
+        });
       }
     };
-  }, []);
+  }, [socket]);
 
   const getStatusColor = () => {
     switch (connectionStatus) {
@@ -296,7 +408,7 @@ const LiveStreamCamera = () => {
                 </p>
                 {isStreaming && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Sending video chunks every 2s
+                    Sending video chunks every 1s
                   </p>
                 )}
               </div>
@@ -348,23 +460,44 @@ const LiveStreamCamera = () => {
               </div>
             </div>
 
+            {/* Stream Statistics */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">
+                📊 Stream Statistics
+              </h4>
+              <div className="grid grid-cols-3 gap-4 text-sm text-blue-700">
+                <div>
+                  <p className="font-medium">Chunks Sent</p>
+                  <p className="text-lg">{streamStats.chunkssent}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Total Data</p>
+                  <p className="text-lg">{(streamStats.totalBytes / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <div>
+                  <p className="font-medium">Errors</p>
+                  <p className="text-lg">{streamStats.errors}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Debug Information */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h4 className="font-medium text-yellow-800 mb-2">
-                Debug Information
+                🔧 Debug Information
               </h4>
               <div className="text-sm text-yellow-700 space-y-1">
-                <p>State: {isStreaming ? 'Streaming' : 'Not Streaming'}</p>
-                <p>
-                  Ref: {isStreamingRef.current ? 'Streaming' : 'Not Streaming'}
-                </p>
-                <p>Connection: {connectionStatus}</p>
-                <p>
-                  Recorder: {mediaRecorderRef.current ? 'Active' : 'Inactive'}
-                </p>
-                <p>
-                  Interval: {chunkIntervalRef.current ? 'Running' : 'Stopped'}
-                </p>
+                <p><strong>State:</strong> {isStreaming ? 'Streaming' : 'Not Streaming'}</p>
+                <p><strong>Ref:</strong> {isStreamingRef.current ? 'Streaming' : 'Not Streaming'}</p>
+                <p><strong>Connection:</strong> {connectionStatus}</p>
+                <p><strong>Recorder:</strong> {mediaRecorderRef.current ? 
+                  `Active (${mediaRecorderRef.current.state})` : 'Inactive'}</p>
+                <p><strong>Socket:</strong> {socket ? 'Connected' : 'Disconnected'}</p>
+                <p><strong>Stream Started:</strong> {streamStartedRef.current ? 'Yes' : 'No'}</p>
+                <p><strong>Current Sequence:</strong> {chunkSequenceRef.current}</p>
+                {streamData && (
+                  <p><strong>Stream Key:</strong> {streamData.streamKey}</p>
+                )}
               </div>
             </div>
           </div>
