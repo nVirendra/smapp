@@ -43,6 +43,13 @@ const Header = ({ darkMode, setDarkMode }) => {
                   <FiHome className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
          </Link>
         </div>
+        
+        <Link to="/go-live" className="text-gray-600 hover:text-gray-900">
+        <FiVideo className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/> 
+        </Link>
+         <Link to="/live-streams" className="text-gray-600 hover:text-gray-900">
+                  <FiPlay className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
+        </Link>
         <div
           className="relative flex items-center gap-1 cursor-pointer"
           onClick={() => setShowDropdown(!showDropdown)}
@@ -61,13 +68,7 @@ const Header = ({ darkMode, setDarkMode }) => {
             </div>
           )}
         </div>
-        <Link to="/go-live" className="text-gray-600 hover:text-gray-900">
-        <FiVideo className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/> 
-        </Link>
-         <Link to="/live-streams" className="text-gray-600 hover:text-gray-900">
-                  <FiPlay className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-purple-600 cursor-pointer transition-colors"/>
-        </Link>
-        <button
+        {/* <button
           onClick={() => setDarkMode(!darkMode)}
           className="ml-4 p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
@@ -76,7 +77,7 @@ const Header = ({ darkMode, setDarkMode }) => {
           ) : (
             <FiMoon className="w-5 h-5 text-gray-600" />
           )}
-        </button>
+        </button> */}
       </div>
     </header>
   );

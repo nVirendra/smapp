@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import Webcam from 'react-webcam';
 import axios from 'axios';
 import MainLayout from '../../layouts/MainLayout';
@@ -119,14 +119,14 @@ const LiveStreamCamera = () => {
         errors: 0
       });
 
-      await startWebRTCStreaming(stream, socket);
+      await startWebRTCStreaming(socket);
     } catch (err) {
       console.error('Start streaming error:', err);
       setConnectionStatus('error');
     }
   };
 
-  const startWebRTCStreaming = async (stream, socket) => {
+  const startWebRTCStreaming = async (socket) => {
     try {
       if (!socket) {
         console.error('Socket not available');
@@ -134,91 +134,33 @@ const LiveStreamCamera = () => {
         return;
       }
 
-      // 🎥 Enhanced MediaRecorder configuration for better WebM output
-      const options = {
-        mimeType: 'video/webm; codecs=vp8,opus',
-        videoBitsPerSecond: 2000000, // 2Mbps
-        audioBitsPerSecond: 128000,  // 128kbps
-      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      
+      webcamRef.current = stream;
 
-      // Fallback options if the preferred format isn't supported
-      let mediaRecorderOptions = options;
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        console.warn('⚠️ VP8/Opus not supported, trying VP9/Opus');
-        mediaRecorderOptions = {
-          mimeType: 'video/webm; codecs=vp9,opus',
-          videoBitsPerSecond: 2000000,
-          audioBitsPerSecond: 128000,
-        };
-        
-        if (!MediaRecorder.isTypeSupported(mediaRecorderOptions.mimeType)) {
-          console.warn('⚠️ VP9/Opus not supported, using default');
-          mediaRecorderOptions = {
-            mimeType: 'video/webm',
-            videoBitsPerSecond: 2000000,
-            audioBitsPerSecond: 128000,
-          };
-        }
-      }
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp8,opus',
+      });
 
-      console.log(`🎥 Using MediaRecorder with: ${mediaRecorderOptions.mimeType}`);
+      mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorderRef.current = new MediaRecorder(stream, mediaRecorderOptions);
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0 && isStreamingRef.current) {
-          const isFirstChunk = !streamStartedRef.current;
-          streamStartedRef.current = true;
-          
-          setConnectionStatus('sending');
-          
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            try {
-              const arrayBuffer = reader.result;
-              const currentSequence = chunkSequenceRef.current++;
-              
-              console.log(`📦 Sending chunk ${currentSequence}: ${arrayBuffer.byteLength} bytes, isFirst: ${isFirstChunk}`);
-              
-              socket.emit('stream-chunk', {
-                streamKey: streamDataRef.current?.streamKey,
-                chunk: arrayBuffer,
-                isFirstChunk: isFirstChunk,
-                sequenceNumber: currentSequence,
-                timestamp: Date.now()
-              });
-
-              // Update stats
-              setStreamStats(prev => ({
-                chunksent: prev.chunksent + 1,
-                totalBytes: prev.totalBytes + arrayBuffer.byteLength,
-                errors: prev.errors
-              }));
-
-              setConnectionStatus('connected');
-            } catch (error) {
-              console.error('🔥 Error sending chunk:', error);
-              setStreamStats(prev => ({
-                ...prev,
-                errors: prev.errors + 1
-              }));
-              setConnectionStatus('error');
-            }
-          };
-          
-          reader.onerror = () => {
-            console.error('🔥 FileReader error');
-            setStreamStats(prev => ({
-              ...prev,
-              errors: prev.errors + 1
-            }));
-            setConnectionStatus('error');
-          };
-          
-          reader.readAsArrayBuffer(event.data);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          console.log('Sending chunk:', e.data.size);
+          e.data.arrayBuffer().then((buffer) => {
+            socket.emit('stream-chunk', {
+              streamKey: streamDataRef.current?.streamKey,
+              chunk: buffer,
+            });
+          });
         }
       };
 
+      
       mediaRecorderRef.current.onstart = () => {
         console.log('🎬 MediaRecorder started');
         setConnectionStatus('connected');
@@ -239,7 +181,7 @@ const LiveStreamCamera = () => {
       };
 
       // 🚀 Start recording with 1-second intervals for good balance
-      mediaRecorderRef.current.start(1000);
+      mediaRecorder.start(1000);
 
       console.log('📡 MediaRecorder started with socket.io streaming');
     } catch (err) {
